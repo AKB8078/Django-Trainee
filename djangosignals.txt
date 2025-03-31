@@ -1,0 +1,121 @@
+Question 1: By default are django signals executed synchronously or asynchronously? Please support your answer with a code snippet that conclusively proves your stance. The code does not need to be elegant and production ready, we just need to understand your logic.
+
+Answer:
+
+Django signals are executed synchronously. When a signal is triggered, the connected receiver function executes immediately before the flow of execution continues.
+
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+
+@receiver(post_save, sender=User)
+def send_welcome_email(sender, instance, created, **kwargs):
+    if created:
+        send_mail(
+            subject="Welcome to Website",
+            message="Successfully signed up!",
+            from_email="admin@gmail.com",
+            recipient_list=[instance.email],
+        )
+
+
+Question 2: Do django signals run in the same thread as the caller? Please support your answer with a code snippet that conclusively proves your stance. The code does not need to be elegant and production ready, we just need to understand your logic.
+
+Answer:
+
+Django signals run synchronously in the same thread as the caller. If a signal is triggered inside a view or model save method, it will execute immediately before the caller continues execution.
+
+import threading
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.contrib.auth.models import User
+
+
+
+def print_thread_info(info):
+    print(f"{info} - Thread ID: {threading.get_ident()}")
+
+@receiver(post_save, sender=User)
+def user_created_signal(sender, instance, created, **kwargs):
+    print_thread_info("Signal Function")  
+
+
+print_thread_info("Before User Creation")
+user = User.objects.create(username="alan", email="alan@gmail.com", password="pass123")
+print_thread_info("After User Creation : ")
+
+
+
+Question 3: By default do django signals run in the same database transaction as the caller? Please support your answer with a code snippet that conclusively proves your stance. The code does not need to be elegant and production ready, we just need to understand your logic.
+
+Answer:
+
+
+Yes, Django signals run in the same database transaction as the caller by default. If a database transaction fails and rolls back, the signal’s effects are also rolled back if they involve database operations. This is because signals execute synchronously in the same thread and transaction as the caller.
+
+
+from django.db import transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.contrib.auth.models import User
+from django.db import models
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(blank=True)
+
+
+@receiver(post_save, sender=User)
+def create_profile(sender, instance, created, **kwargs):
+    if created:
+        print("Signal: Creating Profile...")
+        Profile.objects.create(user=instance)  
+
+
+try:
+    with transaction.atomic(): 
+        print("Creating User...")
+        user = User.objects.create(username="alan", email="alan@example.com", password="password123")
+
+       
+        raise Exception("Simulating transaction failure!")  
+
+except Exception as e:
+    print(f"Transaction failed: {e}")
+
+
+print("Checking if user exists:", User.objects.filter(username="alan").exists())
+print("Checking if profile exists:", Profile.objects.filter(user__username="alan").exists())
+
+
+
+
+Topic: Custom Classes in Python
+
+Description: You are tasked with creating a Rectangle class with the following requirements:
+
+An instance of the Rectangle class requires length:int and width:int to be initialized.
+We can iterate over an instance of the Rectangle class 
+When an instance of the Rectangle class is iterated over, we first get its length in the format: {'length': <VALUE_OF_LENGTH>} followed by the width {width: <VALUE_OF_WIDTH>}
+
+
+
+class Rectangle:
+    def __init__(self, length: int, width: int):
+        self.length = length
+        self.width = width
+    
+    def __iter__(self):
+        yield {"length": self.length}
+        yield {"width": self.width}
+
+
+l=int(input("enter length :"))
+b=int(input("enter width : "))
+
+rectangle = Rectangle( l, b)
+for length_and_width in rectangle:
+    print(length_and_width)
+
+
